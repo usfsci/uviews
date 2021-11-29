@@ -7,17 +7,17 @@ import (
 	"github.com/usfsci/ustore"
 )
 
-type view interface {
-	get(w http.ResponseWriter, r *http.Request)
-	post(w http.ResponseWriter, r *http.Request)
-	setSession(s *ustore.Session)
-	getSession() *ustore.Session
-	setKind(kind string)
-	getKind() string
-	isKind(kind string) bool
-	update(oldView view)
-	canRead(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
-	canWrite(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
+type View interface {
+	Get(w http.ResponseWriter, r *http.Request)
+	Post(w http.ResponseWriter, r *http.Request)
+	SetSession(s *ustore.Session)
+	GetSession() *ustore.Session
+	SetKind(kind string)
+	GetKind() string
+	IsKind(kind string) bool
+	Update(oldView View)
+	CanRead(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
+	CanWrite(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
 }
 
 type DefaultView struct {
@@ -25,36 +25,36 @@ type DefaultView struct {
 	*ustore.Session
 }
 
-func (view *DefaultView) post(w http.ResponseWriter, r *http.Request) {
+func (view *DefaultView) Post(w http.ResponseWriter, r *http.Request) {
 }
 
-func (view *DefaultView) setSession(s *ustore.Session) {
+func (view *DefaultView) SetSession(s *ustore.Session) {
 	view.Session = s
 }
 
-func (view *DefaultView) getSession() *ustore.Session {
+func (view *DefaultView) GetSession() *ustore.Session {
 	return view.Session
 }
 
-func (view *DefaultView) setKind(kind string) {
+func (view *DefaultView) SetKind(kind string) {
 	view.Kind = kind
 }
 
-func (view *DefaultView) getKind() string {
+func (view *DefaultView) GetKind() string {
 	return view.Kind
 }
 
-func (view *DefaultView) isKind(kind string) bool {
+func (view *DefaultView) IsKind(kind string) bool {
 	return view.Kind == kind
 }
 
-func (view *DefaultView) update(oldView view) {}
+func (view *DefaultView) Update(oldView View) {}
 
-func (view *DefaultView) setUser(u *ustore.User) {
+func (view *DefaultView) SetUser(u *ustore.User) {
 	view.User = u
 }
 
-func (view *DefaultView) getUser() *ustore.User {
+func (view *DefaultView) GetUser() *ustore.User {
 	return view.User
 }
 
