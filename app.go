@@ -45,9 +45,9 @@ func NewApp(authKey []byte, port string, dataDir string, rootPath string) *App {
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fserver))
 
 	// Login handlers
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	/*r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, rootPath, http.StatusSeeOther)
-	})
+	})*/
 
 	// TODO: Install route handlers
 
