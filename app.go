@@ -25,7 +25,7 @@ const (
 )
 
 type App struct {
-	router  *mux.Router
+	Router  *mux.Router
 	port    string
 	dataDir string
 	// Either http or https
@@ -63,7 +63,7 @@ func NewApp(authKey []byte, port string, dataDir string, rootPath string) *App {
 	log.Printf("MaxAge set\n")
 
 	app := &App{
-		router:  r,
+		Router:  r,
 		dataDir: dataDir,
 		port:    port,
 	}
@@ -79,7 +79,7 @@ func NewApp(authKey []byte, port string, dataDir string, rootPath string) *App {
 
 func (app *App) RunApp() {
 	// Start server
-	unsecureServerStart(app.router, app.port)
+	unsecureServerStart(app.Router, app.port)
 }
 
 // unsecureServerStart - Start server on HTTP mode
