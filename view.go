@@ -50,10 +50,6 @@ func (view *DefaultView) IsKind(kind string) bool {
 
 func (view *DefaultView) Update(oldView View) {}
 
-func (view *DefaultView) SetUser(u *ustore.User) {
-	view.User = u
-}
-
 func (view *DefaultView) GetUser() *ustore.User {
 	return view.User
 }
