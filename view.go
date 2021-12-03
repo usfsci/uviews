@@ -16,8 +16,8 @@ type View interface {
 	GetKind() string
 	IsKind(kind string) bool
 	Update(oldView View)
-	CanRead(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
-	CanWrite(ctx context.Context, vars map[string]string) (bool, *ustore.StoreError)
+	CanRead(ctx context.Context, vars map[string]string) (bool, error)
+	CanWrite(ctx context.Context, vars map[string]string) (bool, error)
 }
 
 type DefaultView struct {
