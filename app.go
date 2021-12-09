@@ -230,7 +230,7 @@ func Authenticate(newView func() View, viewHandler func(http.ResponseWriter, *ht
 	}
 }
 
-func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, *ustore.Session, *ustore.User, View)) http.HandlerFunc {
+func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, *ustore.Session, View)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Try to get the session
 		session, err := LoadSession(w, r)
@@ -238,8 +238,6 @@ func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		var u *ustore.User
 
 		// If there was no session set one with UserID nil
 		if session == nil {
@@ -249,7 +247,7 @@ func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http
 			}
 		}
 
-		viewHandler(w, r, session, u, newView())
+		viewHandler(w, r, session, newView())
 	}
 }
 
