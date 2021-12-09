@@ -37,7 +37,12 @@ type App struct {
 // port: Server port
 // dataDir: Directory for Data
 // rootPath: URL path for calls to root
-func NewApp(authKey []byte, port string, dataDir string, rootPath string) *App {
+func NewApp(appName string, authKey []byte, port string, dataDir string, rootPath string) *App {
+	appName = "_" + strings.TrimSpace(strings.ToLower(appName))
+
+	// Sets up the session ID
+	SetupSessions(appName + "sessionid")
+
 	r := mux.NewRouter().StrictSlash(true)
 
 	// File server for static content
@@ -55,7 +60,7 @@ func NewApp(authKey []byte, port string, dataDir string, rootPath string) *App {
 	csrfMiddleware := csrf.Protect(
 		authKey,
 		csrf.Secure(true),
-		csrf.CookieName("_lyceumcsfr"),
+		csrf.CookieName(appName+"csfr"),
 		csrf.HttpOnly(true),
 		csrf.Path("/"),
 		csrf.MaxAge(6*30*86400), // 6 month to avoid overnigth issues
@@ -133,6 +138,12 @@ func (app *App) redirectMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (app *App) sessionsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	})
+}
+
 // ViewGetHandler - Wrapper for view GET
 // Sets the view session and user
 // Verifies that the user is entitled to read from this view
@@ -199,12 +210,6 @@ func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, 
 	f.SetCsrf(csrf.TemplateField(r))
 
 	f.SetLoggedIn(session != nil && session.User != nil)
-
-	/*if session != nil && session.User != nil {
-		f.SetLoggedIn(true)
-	} else {
-		f.SetLoggedIn(false)
-	}*/
 
 	// Serve the template
 	if err := t.Execute(w, f); err != nil {
