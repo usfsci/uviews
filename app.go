@@ -136,7 +136,7 @@ func (app *App) redirectMiddleware(next http.Handler) http.Handler {
 // ViewGetHandler - Wrapper for view GET
 // Sets the view session and user
 // Verifies that the user is entitled to read from this view
-func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, u *ustore.User, v View) {
+func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v View) {
 	// Update view with Session & User
 	v.SetSession(s)
 
@@ -157,7 +157,7 @@ func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, u
 // ViewPostHandler - Decodes POST form and calls view post
 // Sets the view session and user
 // Verifies that the user is entitled to write to this view
-func ViewPostHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, u *ustore.User, v View) {
+func ViewPostHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v View) {
 	defer r.Body.Close()
 
 	// Update view with Session information
