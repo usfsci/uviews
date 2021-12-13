@@ -30,9 +30,9 @@ func SetupSessions(sessionCookieName string) {
 func InitSession(w http.ResponseWriter, r *http.Request, userID ustore.SIDType) (*ustore.Session, error) {
 	// Build a DB session
 	s := &ustore.Session{}
-	if serr := s.Add(r.Context(), userID, ""); serr != nil {
-		handleStoreError(w, serr)
-		return nil, serr
+	if err := s.Add(r.Context(), userID, ""); err != nil {
+		handleStoreError(w, err)
+		return nil, err
 	}
 
 	// Set the cookie
@@ -85,8 +85,6 @@ func LoadSession(w http.ResponseWriter, r *http.Request) (*ustore.Session, error
 		handleStoreError(w, err)
 		return nil, err
 	}
-
-	// TODO: Get User
 
 	return session, nil
 }

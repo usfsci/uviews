@@ -64,10 +64,23 @@ func (view *DefaultView) Update(oldView View) {}
 
 // Load - Loads the Session & User into the view
 func (view *DefaultView) Load(w http.ResponseWriter, r *http.Request) error {
-	session, err := LoadSession(w, r)
+	var session *ustore.Session
+	var err error
+
+	session, err = LoadSession(w, r)
 	if err != nil {
 		return err
 	}
+
+	if session == nil {
+		// nil session means that there was no session cookie
+		// Init a session with user nil
+		session, err = InitSession(w, r, nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	view.Session = session
 
 	if session.UserID != nil {

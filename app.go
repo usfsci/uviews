@@ -1,7 +1,6 @@
 package uviews
 
 import (
-	"context"
 	"fmt"
 	"html/template"
 	"log"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
-	"github.com/usfsci/ustore"
 	"golang.org/x/text/message"
 )
 
@@ -147,11 +145,11 @@ func (app *App) redirectMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (app *App) sessionsMiddleware(next http.Handler) http.Handler {
+/*func (app *App) sessionsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 	})
-}
+}*/
 
 // ViewGetHandler - Wrapper for view GET
 // If the user is not entitled to read from this view
@@ -285,15 +283,6 @@ func (app *App) BypassAuth(newView func() View, viewHandler func(http.ResponseWr
 
 		viewHandler(w, r, view)
 	}
-}
-
-func loadUser(ctx context.Context, userID ustore.SIDType) (*ustore.User, error) {
-	u := &ustore.User{Base: ustore.Base{ID: userID}}
-	if err := u.Get(ctx, nil); err != nil {
-		return nil, err
-	}
-
-	return u, nil
 }
 
 // getLanguage - Parses the Accept Language header to select proper localization
