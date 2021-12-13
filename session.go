@@ -81,10 +81,12 @@ func LoadSession(w http.ResponseWriter, r *http.Request) (*ustore.Session, error
 			ID: id,
 		},
 	}
-	if serr := session.Get(r.Context(), nil); serr != nil {
+	if err := session.Get(r.Context(), nil); err != nil {
 		handleStoreError(w, err)
-		return nil, serr
+		return nil, err
 	}
+
+	// TODO: Get User
 
 	return session, nil
 }

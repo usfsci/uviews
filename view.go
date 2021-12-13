@@ -15,7 +15,10 @@ type View interface {
 	SetKind(kind string)
 	GetKind() string
 	IsKind(kind string) bool
+	SetUser(u *ustore.User)
+	GetUser() *ustore.User
 	Update(oldView View)
+	Load(w http.ResponseWriter, r *http.Request) error
 	CanRead(ctx context.Context, vars map[string]string) (bool, error)
 	CanWrite(ctx context.Context, vars map[string]string) (bool, error)
 }
@@ -23,6 +26,7 @@ type View interface {
 type DefaultView struct {
 	Kind string
 	*ustore.Session
+	*ustore.User
 }
 
 func (view *DefaultView) Post(w http.ResponseWriter, r *http.Request) {
@@ -48,16 +52,33 @@ func (view *DefaultView) IsKind(kind string) bool {
 	return view.Kind == kind
 }
 
-func (view *DefaultView) Update(oldView View) {}
+func (view *DefaultView) SetUser(u *ustore.User) {
+	view.User = u
+}
 
 func (view *DefaultView) GetUser() *ustore.User {
 	return view.User
 }
 
-/*func (view *DefaultView) canRead(ctx context.Context, vars map[string]string) (bool, *store.StoreError) {
-	return true, nil
-}
+func (view *DefaultView) Update(oldView View) {}
 
-func (view *DefaultView) canWrite(ctx context.Context, vars map[string]string) (bool, *store.StoreError) {
-	return true, nil
-}*/
+// Load - Loads the Session & User into the view
+func (view *DefaultView) Load(w http.ResponseWriter, r *http.Request) error {
+	session, err := LoadSession(w, r)
+	if err != nil {
+		return err
+	}
+	view.Session = session
+
+	if session.UserID != nil {
+		u := &ustore.User{Base: ustore.Base{ID: session.UserID}}
+		if err := u.Get(r.Context(), nil); err != nil {
+			handleStoreError(w, err)
+			return err
+		}
+
+		view.User = u
+	}
+
+	return nil
+}

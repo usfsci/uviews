@@ -20,8 +20,8 @@ const (
 	contentDispositionKey   = "Content-Disposition"
 	acceptLanguageHeaderKey = "Accept-Language"
 
-	contentValueDispositionAttachement = "attachment"
-	contentValueOctetStream            = "application/octet-stream"
+	//contentValueDispositionAttachement = "attachment"
+	//contentValueOctetStream            = "application/octet-stream"
 )
 
 type App struct {
@@ -30,6 +30,8 @@ type App struct {
 	dataDir string
 	// Either http or https
 	protocol string
+	// Requests with no auth are redirected here
+	notAuthPath string
 }
 
 // NewApp - Creates and configures Router
@@ -37,7 +39,7 @@ type App struct {
 // port: Server port
 // dataDir: Directory for Data
 // rootPath: URL path for calls to root
-func NewApp(appName string, authKey []byte, port string, dataDir string, rootPath string) *App {
+func NewApp(appName string, authKey []byte, port string, dataDir string, rootPath string, notAuthPath string) *App {
 	appName = "_" + strings.TrimSpace(strings.ToLower(appName))
 
 	// Sets up the session ID
@@ -54,7 +56,14 @@ func NewApp(appName string, authKey []byte, port string, dataDir string, rootPat
 		http.Redirect(w, r, rootPath, http.StatusSeeOther)
 	})*/
 
+	app := &App{
+		Router:      r,
+		dataDir:     dataDir,
+		port:        port,
+		notAuthPath: notAuthPath,
+	}
 	// TODO: Install route handlers
+	//r.HandleFunc("/frontpage", BypassAuth(nil, app.ViewGetHandler)).Methods(http.MethodGet)
 
 	// CSRF middleware
 	csrfMiddleware := csrf.Protect(
@@ -67,11 +76,11 @@ func NewApp(appName string, authKey []byte, port string, dataDir string, rootPat
 	)
 	log.Printf("MaxAge set\n")
 
-	app := &App{
+	/*app := &App{
 		Router:  r,
 		dataDir: dataDir,
 		port:    port,
-	}
+	}*/
 
 	// Enable middlewares
 	r.Use(loggingMiddleware)
@@ -145,12 +154,9 @@ func (app *App) sessionsMiddleware(next http.Handler) http.Handler {
 }
 
 // ViewGetHandler - Wrapper for view GET
-// Sets the view session and user
-// Verifies that the user is entitled to read from this view
-func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v View) {
-	// Update view with Session & User
-	v.SetSession(s)
-
+// If the user is not entitled to read from this view
+// redirects to notAuthURL
+func (app *App) ViewGetHandler(w http.ResponseWriter, r *http.Request, v View) {
 	// Authorize
 	ok, err := v.CanRead(r.Context(), mux.Vars(r))
 	if err != nil {
@@ -158,7 +164,7 @@ func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v
 		return
 	}
 	if !ok {
-		redirect(w, r, "/ipc/login", http.StatusSeeOther)
+		redirect(w, r, app.notAuthPath, http.StatusSeeOther)
 		return
 	}
 
@@ -166,13 +172,9 @@ func ViewGetHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v
 }
 
 // ViewPostHandler - Decodes POST form and calls view post
-// Sets the view session and user
 // Verifies that the user is entitled to write to this view
-func ViewPostHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, v View) {
+func ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) {
 	defer r.Body.Close()
-
-	// Update view with Session information
-	v.SetSession(s)
 
 	// Check authorization
 	ok, err := v.CanWrite(r.Context(), mux.Vars(r))
@@ -197,7 +199,7 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request, s *ustore.Session, 
 	v.Post(w, r)
 }
 
-func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, session *ustore.Session, f Form) {
+func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, view View, f Form) {
 	lang := getLanguage(r)
 
 	t, err := template.New(filepath.Base(templateFiles[0])).Funcs(templateFuncs(lang)).ParseFiles(templateFiles...)
@@ -209,7 +211,7 @@ func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, 
 	// Always add CSRF to any Forms
 	f.SetCsrf(csrf.TemplateField(r))
 
-	f.SetLoggedIn(session != nil && session.User != nil)
+	f.SetLoggedIn(view.GetUser() != nil && view.GetUser().TokenConfirmed)
 
 	// Serve the template
 	if err := t.Execute(w, f); err != nil {
@@ -218,27 +220,37 @@ func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, 
 	}
 }
 
-func Authenticate(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, *ustore.Session, View)) http.HandlerFunc {
+func (app *App) Authenticate(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, View)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := LoadSession(w, r)
+		/*session, err := LoadSession(w, r)
 		if err != nil || session == nil {
 			redirect(w, r, "/ipc/login", http.StatusSeeOther)
 			return
 		}
 
-		if session.User == nil || !session.User.TokenConfirmed {
+		if session.UserID == nil || !session.User.TokenConfirmed {
 			redirect(w, r, "/ipc/login", http.StatusSeeOther)
+			return
+		}*/
+
+		view := newView()
+		if err := view.Load(w, r); err != nil {
 			return
 		}
 
-		viewHandler(w, r, session, newView())
+		if view.GetUser() == nil || !view.GetUser().TokenConfirmed {
+			redirect(w, r, app.notAuthPath, http.StatusSeeOther)
+			return
+		}
+
+		viewHandler(w, r, newView())
 	}
 }
 
-func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, *ustore.Session, View)) http.HandlerFunc {
+func (app *App) BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, View)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Try to get the session
-		session, err := LoadSession(w, r)
+		/*session, err := LoadSession(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -252,7 +264,26 @@ func BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http
 			}
 		}
 
-		viewHandler(w, r, session, newView())
+		view := newView()
+		view.SetSession(session)
+
+		// If there is a UserID load the user into the View
+		if session.UserID != nil {
+			u := &ustore.User{Base: ustore.Base{ID: session.UserID}}
+			if err := u.Get(r.Context(), nil); err != nil {
+				handleStoreError(w, err)
+				return
+			}
+
+			view.SetUser(u)
+		}*/
+
+		view := newView()
+		if err := view.Load(w, r); err != nil {
+			return
+		}
+
+		viewHandler(w, r, view)
 	}
 }
 
