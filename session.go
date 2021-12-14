@@ -104,12 +104,12 @@ func StoreDataInSession(ctx context.Context, session *ustore.Session, object int
 // restoreFormFromSession - Restores View fields from the session
 // If there is no data it does nothing
 // It clears the data stored in the session
-func RestoreDataFromSession(ctx context.Context, session *ustore.Session, data []byte, object interface{}) error {
-	if data == nil || len(data) < 1 {
+func RestoreDataFromSession(ctx context.Context, session *ustore.Session, object interface{}) error {
+	if session.Data == nil || len(session.Data) < 1 {
 		return nil
 	}
 
-	if err := json.Unmarshal(data, object); err != nil {
+	if err := json.Unmarshal(session.Data, object); err != nil {
 		return err
 	}
 
