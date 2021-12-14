@@ -60,8 +60,6 @@ func NewApp(appName string, authKey []byte, port string, dataDir string, rootPat
 		port:        port,
 		notAuthPath: notAuthPath,
 	}
-	// TODO: Install route handlers
-	//r.HandleFunc("/frontpage", BypassAuth(nil, app.ViewGetHandler)).Methods(http.MethodGet)
 
 	// CSRF middleware
 	csrfMiddleware := csrf.Protect(
@@ -171,7 +169,7 @@ func (app *App) ViewGetHandler(w http.ResponseWriter, r *http.Request, v View) {
 
 // ViewPostHandler - Decodes POST form and calls view post
 // Verifies that the user is entitled to write to this view
-func ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) {
+func (app *App) ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) {
 	defer r.Body.Close()
 
 	// Check authorization
@@ -181,7 +179,7 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) {
 		return
 	}
 	if !ok {
-		redirect(w, r, "/ipc/login", http.StatusSeeOther)
+		redirect(w, r, app.notAuthPath, http.StatusSeeOther)
 		return
 	}
 
