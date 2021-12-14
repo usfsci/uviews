@@ -31,7 +31,7 @@ func InitSession(w http.ResponseWriter, r *http.Request, userID ustore.SIDType) 
 	// Build a DB session
 	s := &ustore.Session{}
 	if err := s.Add(r.Context(), userID, ""); err != nil {
-		handleStoreError(w, err)
+		HandleStoreError(w, err)
 		return nil, err
 	}
 
@@ -82,7 +82,7 @@ func LoadSession(w http.ResponseWriter, r *http.Request) (*ustore.Session, error
 		},
 	}
 	if err := session.Get(r.Context(), nil); err != nil {
-		handleStoreError(w, err)
+		HandleStoreError(w, err)
 		return nil, err
 	}
 

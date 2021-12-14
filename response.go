@@ -7,7 +7,7 @@ import (
 	"github.com/usfsci/ustore"
 )
 
-func handleStoreError(w http.ResponseWriter, err error) {
+func HandleStoreError(w http.ResponseWriter, err error) {
 	if errors.Is(err, ustore.ErrNotFound) {
 		// The requested entity was not found
 		http.Error(w, err.Error(), http.StatusNotFound)

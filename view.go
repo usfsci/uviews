@@ -86,7 +86,7 @@ func (view *DefaultView) Load(w http.ResponseWriter, r *http.Request) error {
 	if session.UserID != nil {
 		u := &ustore.User{Base: ustore.Base{ID: session.UserID}}
 		if err := u.Get(r.Context(), nil); err != nil {
-			handleStoreError(w, err)
+			HandleStoreError(w, err)
 			return err
 		}
 

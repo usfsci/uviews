@@ -80,7 +80,7 @@ func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session,
 					// Mark the missing key
 					form.SetMissing(efe.Key)
 					if err := StoreDataInSession(r.Context(), session, &form); err != nil {
-						handleStoreError(w, err)
+						HandleStoreError(w, err)
 						return err
 					}
 					http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
