@@ -90,17 +90,18 @@ func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session,
 			}
 		}
 
-		if ok := validator(form); !ok {
-			if err := StoreDataInSession(r.Context(), session, &form); err != nil {
-				HandleStoreError(w, err)
-				return err
-			}
-			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
-		}
-
 		// Any other error is considered internal
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err
+	}
+
+	// Validate the form
+	if ok := validator(form); !ok {
+		if err := StoreDataInSession(r.Context(), session, &form); err != nil {
+			HandleStoreError(w, err)
+			return err
+		}
+		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 	}
 
 	return nil
