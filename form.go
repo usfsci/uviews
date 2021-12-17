@@ -69,7 +69,8 @@ func (df *DefaultForm) SetLoggedIn(state bool) {
 // If there are missing required inputs flags the 1st one, stores the form in the session
 // and redirects to GET.
 // If there is an error the calling view should return and not attempt to execute any Action.
-func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session, form Form) error {
+// The validator func should validate the form fields, returning true if all passed, false otherwise
+func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session, form Form, validator func(f Form) bool) error {
 	pf := r.PostForm
 
 	if err := formDecoder.Decode(form, pf); err != nil {
@@ -88,6 +89,15 @@ func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session,
 				}
 			}
 		}
+
+		if ok := validator(form); !ok {
+			if err := StoreDataInSession(r.Context(), session, &form); err != nil {
+				HandleStoreError(w, err)
+				return err
+			}
+			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+		}
+
 		// Any other error is considered internal
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err
