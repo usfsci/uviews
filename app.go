@@ -5,11 +5,11 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
+	"github.com/usfsci/ustore"
 	"golang.org/x/text/message"
 )
 
@@ -17,6 +17,8 @@ const (
 	contentTypeKey          = "Content-Type"
 	contentDispositionKey   = "Content-Disposition"
 	acceptLanguageHeaderKey = "Accept-Language"
+
+	debugMode = true
 
 	//contentValueDispositionAttachement = "attachment"
 	//contentValueOctetStream            = "application/octet-stream"
@@ -28,6 +30,10 @@ type App struct {
 	dataDir string
 	// Either http or https
 	protocol string
+	// App Name used to derive Cookies name's
+	name string
+	// CSRF Secret Key
+	csrfKey []byte
 	// Requests with no auth are redirected here
 	notAuthPath string
 }
@@ -37,7 +43,7 @@ type App struct {
 // port: Server port
 // dataDir: Directory for Data
 // rootPath: URL path for calls to root
-func NewApp(appName string, authKey []byte, port string, dataDir string, rootPath string, notAuthPath string) *App {
+func NewApp(appName string, csrfKey []byte, port string, dataDir string, rootPath string, notAuthPath string) *App {
 	appName = "_" + strings.TrimSpace(strings.ToLower(appName))
 
 	// Sets up the session ID
@@ -49,42 +55,46 @@ func NewApp(appName string, authKey []byte, port string, dataDir string, rootPat
 	fserver := http.FileServer(http.Dir(dataDir + "/static"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fserver))
 
-	// Login handlers
-	/*r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, rootPath, http.StatusSeeOther)
-	})*/
-
 	app := &App{
 		Router:      r,
 		dataDir:     dataDir,
 		port:        port,
 		notAuthPath: notAuthPath,
+		name:        appName,
+		csrfKey:     csrfKey,
 	}
 
 	// CSRF middleware
-	csrfMiddleware := csrf.Protect(
-		authKey,
+	/*csrfMiddleware := csrf.Protect(
+		csrfKey,
 		csrf.Secure(true),
 		csrf.CookieName(appName+"csfr"),
 		csrf.HttpOnly(true),
 		csrf.Path("/"),
 		csrf.MaxAge(6*30*86400), // 6 month to avoid overnigth issues
 	)
-	log.Printf("MaxAge set\n")
-
-	/*app := &App{
-		Router:  r,
-		dataDir: dataDir,
-		port:    port,
-	}*/
+	log.Printf("MaxAge set\n")*/
 
 	// Enable middlewares
 	r.Use(loggingMiddleware)
 	r.Use(app.redirectMiddleware)
-	r.Use(csrfMiddleware)
+	//r.Use(csrfMiddleware)
 
 	// Return an instance of the App
 	return app
+}
+
+func (app *App) EnableCSRF() {
+	app.Router.Use(
+		csrf.Protect(
+			app.csrfKey,
+			csrf.Secure(true),
+			csrf.CookieName(app.name+"csfr"),
+			csrf.HttpOnly(true),
+			csrf.Path("/"),
+			csrf.MaxAge(6*30*86400), // 6 month to avoid overnigth issues
+		),
+	)
 }
 
 func (app *App) RunApp() {
@@ -143,12 +153,6 @@ func (app *App) redirectMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-/*func (app *App) sessionsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-	})
-}*/
-
 // ViewGetHandler - Wrapper for view GET
 // If the user is not entitled to read from this view
 // redirects to notAuthURL
@@ -195,46 +199,42 @@ func (app *App) ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) 
 	v.Post(w, r)
 }
 
-func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, view View, f Form) {
-	lang := getLanguage(r)
+// ViewPostHandler - Decodes POST form and calls view post
+// Verifies that the user is entitled to write to this view
+func (app *App) RestPostHandler(w http.ResponseWriter, r *http.Request, entity ustore.Entity, u *ustore.User) {
+	defer r.Body.Close()
 
-	t, err := template.New(filepath.Base(templateFiles[0])).Funcs(templateFuncs(lang)).ParseFiles(templateFiles...)
+	// Check authorization
+	ok, err := entity.CanWrite(u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Always add CSRF to any Forms
-	f.SetCsrf(csrf.TemplateField(r))
-
-	f.SetLoggedIn(view.GetUser() != nil && view.GetUser().TokenConfirmed)
-
-	// Serve the template
-	if err := t.Execute(w, f); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if !ok {
+		redirect(w, r, app.notAuthPath, http.StatusSeeOther)
 		return
 	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	//log.Printf("POST:\n%+v\n", r.Form)
+
+	// Delete the CSRF token to avoid Decoder error
+	delete(r.PostForm, "gorilla.csrf.Token")
+
+	//v.Post(w, r)
 }
 
 func (app *App) Authenticate(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, View)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		/*session, err := LoadSession(w, r)
-		if err != nil || session == nil {
-			redirect(w, r, "/ipc/login", http.StatusSeeOther)
-			return
-		}
-
-		if session.UserID == nil || !session.User.TokenConfirmed {
-			redirect(w, r, "/ipc/login", http.StatusSeeOther)
-			return
-		}*/
-
 		view := newView()
 		if err := view.Load(w, r); err != nil {
 			return
 		}
 
-		if view.GetUser() == nil || !view.GetUser().TokenConfirmed {
+		if view.GetUser() == nil || !view.GetUser().EmailConfirmed {
 			redirect(w, r, app.notAuthPath, http.StatusSeeOther)
 			return
 		}
@@ -243,37 +243,8 @@ func (app *App) Authenticate(newView func() View, viewHandler func(http.Response
 	}
 }
 
-func (app *App) BypassAuth(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, View)) http.HandlerFunc {
+func (app *App) BypassAuthentication(newView func() View, viewHandler func(http.ResponseWriter, *http.Request, View)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Try to get the session
-		/*session, err := LoadSession(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// If there was no session set one with UserID nil
-		if session == nil {
-			session, err = InitSession(w, r, nil)
-			if err != nil {
-				return
-			}
-		}
-
-		view := newView()
-		view.SetSession(session)
-
-		// If there is a UserID load the user into the View
-		if session.UserID != nil {
-			u := &ustore.User{Base: ustore.Base{ID: session.UserID}}
-			if err := u.Get(r.Context(), nil); err != nil {
-				handleStoreError(w, err)
-				return
-			}
-
-			view.SetUser(u)
-		}*/
-
 		view := newView()
 		if err := view.Load(w, r); err != nil {
 			return

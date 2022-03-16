@@ -3,7 +3,9 @@ package uviews
 import (
 	"html/template"
 	"net/http"
+	"path/filepath"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/schema"
 	"github.com/usfsci/ustore"
 )
@@ -105,4 +107,25 @@ func DecodeForm(w http.ResponseWriter, r *http.Request, session *ustore.Session,
 	}
 
 	return nil
+}
+
+func RenderForm(w http.ResponseWriter, r *http.Request, templateFiles []string, view View, f Form) {
+	lang := getLanguage(r)
+
+	t, err := template.New(filepath.Base(templateFiles[0])).Funcs(templateFuncs(lang)).ParseFiles(templateFiles...)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Always add CSRF to any Forms
+	f.SetCsrf(csrf.TemplateField(r))
+
+	f.SetLoggedIn(view.GetUser() != nil && view.GetUser().EmailConfirmed)
+
+	// Serve the template
+	if err := t.Execute(w, f); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
