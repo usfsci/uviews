@@ -42,10 +42,14 @@ github.com/usfsci/ustore v0.0.0-20220316162253-67ebd9e93e18 h1:HIbQdr5yY8MUJE8Hg
 github.com/usfsci/ustore v0.0.0-20220316162253-67ebd9e93e18/go.mod h1:T7rxMcB3HTzPoTrSTckpLI14a4i6uqCT6JzBSvMHWVg=
 github.com/usfsci/ustore v0.0.0-20220316163829-3c1a6fbbaaca h1:OHcUDX0IfDE+alo3P+UxMsfGfcLrOX74Ctkq6LC2sUw=
 github.com/usfsci/ustore v0.0.0-20220316163829-3c1a6fbbaaca/go.mod h1:T7rxMcB3HTzPoTrSTckpLI14a4i6uqCT6JzBSvMHWVg=
+github.com/usfsci/ustore v0.0.0-20220318160358-221d8fd5295f h1:9tUr5P6GAvAyxAKmrFSRaVyIaS+kp7x/A3ARMr22080=
+github.com/usfsci/ustore v0.0.0-20220318160358-221d8fd5295f/go.mod h1:QP1Qi9qsPznVXXvfIUfN8c1fLybMWpJWQpO11xpZMb4=
 github.com/usfsci/uutils v0.0.0-20210722102616-3b352f820f24 h1:/XO+pRxgwZl2GMWmZ7I0JlLkcCxxIa0oDVPylkxhYdM=
 github.com/usfsci/uutils v0.0.0-20210722102616-3b352f820f24/go.mod h1:DNX0f6XV2m3uHfXTRBUDjoVc6WAUQSp4znOlvMlSoyg=
 github.com/usfsci/uutils v0.0.0-20220311122802-de1ef89cb0bf h1:QlXPusnJeHvSdQJUn+yYxU5p2bIURoQePpus/rLe8XA=
 github.com/usfsci/uutils v0.0.0-20220311122802-de1ef89cb0bf/go.mod h1:DNX0f6XV2m3uHfXTRBUDjoVc6WAUQSp4znOlvMlSoyg=
+github.com/usfsci/uutils v0.0.0-20220318140953-923cc0a1c25c h1:2OMzuNL8FVu0CsDW5Z3abb+6FMLJTV54Jv/vJy/sGME=
+github.com/usfsci/uutils v0.0.0-20220318140953-923cc0a1c25c/go.mod h1:DNX0f6XV2m3uHfXTRBUDjoVc6WAUQSp4znOlvMlSoyg=
 golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 h1:/pEO3GD/ABYAjuakUS6xSEmmlyVS4kxBNkeA9tLJiTI=
 golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b h1:QAqMVf3pSa6eeTsuklijukjXBlj7Es2QQplab+/RbQ4=

@@ -2,6 +2,7 @@ package uviews
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -9,10 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/usfsci/ustore"
 )
-
-//var ErrNotAuthenticated = errors.New("not authenticated")
-//var ErrBadRequest = errors.New("bad request")
-//var ErrNotAuthorized = errors.New("not authorized")
 
 func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
 	const origin = "add"
@@ -27,13 +24,15 @@ func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 		return
 	}
 
-	// TODO: mod the entity ops so that they take multiple entries as ancestors,
-	// rather than a single parent
-	var pid ustore.SIDType
-	if len(ancestors) > 0 {
-		pid = ancestors[0]
+	// Check ancestors length
+	if len(ancestors) != ent.AncestorsRootLen() {
+		e := ApiErrWrongAncestors
+		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
-	if err := ent.Add(r.Context(), pid, ""); err != nil {
+
+	// Store add
+	if err := ent.Add(r.Context(), "", ancestors...); err != nil {
 		ApiResponseStoreError(w, origin, err)
 		return
 	}
@@ -44,7 +43,14 @@ func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 func ApiGet(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
 	const origin = "get"
 
-	if err := ent.Get(r.Context(), nil, ancestors...); err != nil {
+	// Get op requires 1 more ancestor than Add or List
+	if len(ancestors) != ent.AncestorsRootLen() {
+		e := ApiErrWrongAncestors
+		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+	}
+
+	if err := ent.Get(r.Context(), &ustore.Filter{}, ancestors...); err != nil {
 		ApiResponseStoreError(w, origin, err)
 		return
 	}
@@ -55,8 +61,15 @@ func ApiGet(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 func ApiList(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
 	const origin = "list"
 
+	// Check ancestors length
+	if len(ancestors) != ent.AncestorsRootLen() {
+		e := ApiErrWrongAncestors
+		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+	}
+
 	ents := make([]ustore.Entity, 0)
-	if err := ent.List(r.Context(), ancestors[0], nil, &ents); err != nil {
+	if err := ent.List(r.Context(), &ustore.Filter{}, &ents, ancestors...); err != nil {
 		ApiResponseStoreError(w, origin, err)
 		return
 	}

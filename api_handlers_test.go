@@ -78,6 +78,17 @@ func TestApiList(t *testing.T) {
 	fmt.Printf("%+v\n", r)
 }
 
+func TestApiUserList(t *testing.T) {
+	app.Router.HandleFunc("/users", app.ApiAuthenticate(ustore.NewUser, ApiList)).Methods(http.MethodGet)
+	r, err := getRequest("/users", "admin@useful-science.com", "Pass123+Q", http.StatusOK, false)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Printf("%+v\n", r)
+}
+
 func postMsg(
 	uname string,
 	pass string,

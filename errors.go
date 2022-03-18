@@ -5,3 +5,7 @@ type ApiError struct {
 	Desc  string `json:"description,omitempty"`
 	Debug string `json:"debug,omitempty"`
 }
+
+var ApiErrWrongAncestors = &ApiError{
+	Desc: "wrong number of ancestors",
+}

@@ -204,8 +204,9 @@ func (app *App) ViewPostHandler(w http.ResponseWriter, r *http.Request, v View) 
 func (app *App) RestPostHandler(w http.ResponseWriter, r *http.Request, entity ustore.Entity, u *ustore.User) {
 	defer r.Body.Close()
 
-	// Check authorization
-	ok, err := entity.CanWrite(u)
+	// TODO: Check authorization
+	//ok, err := entity.CanWrite(u)
+	/*ok, err := entity.IsAuthorized(r.Context(), u, )
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -213,7 +214,7 @@ func (app *App) RestPostHandler(w http.ResponseWriter, r *http.Request, entity u
 	if !ok {
 		redirect(w, r, app.notAuthPath, http.StatusSeeOther)
 		return
-	}
+	}*/
 
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
