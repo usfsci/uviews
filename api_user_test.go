@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/usfsci/ustore"
 )
@@ -14,10 +15,15 @@ import (
 func TestApiUserAdd(t *testing.T) {
 	app.Router.HandleFunc("/users", app.ApiBypassAuthentication(ustore.NewUser, ApiAdd)).Methods(http.MethodPost)
 
-	msg := &ustore.User{
-		Username:      "admin@useful-science.com",
+	u := &ustore.User{
+		Username:      "osm1608@gmail.com",
 		Password:      []byte("Pass123+Q"),
 		AcceptedTerms: true,
+	}
+
+	msg := map[string]interface{}{
+		"timestamp": time.Now().UnixNano(),
+		"data":      u,
 	}
 
 	r, err := postMsg("", "", &msg, "/users", http.StatusOK, false)

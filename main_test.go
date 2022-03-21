@@ -32,7 +32,6 @@ func TestMain(m *testing.M) {
 
 	app.Router.HandleFunc("/users/{0}/clients", app.ApiAuthenticate(ustore.NewClient, ApiAdd)).Methods(http.MethodPost)
 	app.Router.HandleFunc("/users/{0}/clients", app.ApiAuthenticate(ustore.NewClient, ApiList)).Methods(http.MethodGet)
-	//app.RunApp()
 
 	code := m.Run()
 	os.Exit(code)
