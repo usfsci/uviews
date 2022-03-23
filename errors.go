@@ -6,6 +6,10 @@ type ApiError struct {
 	Debug string `json:"debug,omitempty"`
 }
 
-var ApiErrWrongAncestors = &ApiError{
-	Desc: "wrong number of ancestors",
+var ApiErrBadRequest = &ApiError{
+	Desc: "bad request",
 }
+
+/*var ApiErrZeroModTime = &ApiError{
+	Desc: "zero modification time",
+}*/

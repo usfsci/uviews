@@ -11,6 +11,7 @@ import (
 
 type Response struct {
 	Timestamp int64       `json:"timestamp,omitempty"`
+	Version   string      `json:"version"`
 	Origin    string      `json:"origin,omitempty"`
 	Status    int         `json:"status,omitempty"`
 	Data      interface{} `json:"data,omitempty"`
@@ -35,6 +36,7 @@ func ApiResponseWrite(w http.ResponseWriter, origin string, data interface{}, er
 	w.WriteHeader(statusCode)
 
 	r := &Response{
+		Version:   apiVersion,
 		Timestamp: time.Now().In(time.UTC).Unix(),
 		Status:    statusCode,
 		Origin:    origin,
@@ -48,33 +50,6 @@ func ApiResponseWrite(w http.ResponseWriter, origin string, data interface{}, er
 }
 
 func ApiResponseStoreError(w http.ResponseWriter, origin string, err error) {
-	/*var code int
-	e := &ApiError{}
-
-	if errors.Is(err, ustore.ErrNotFound) {
-		// The requested entity was not found
-		code = http.StatusNotAcceptable
-		e.Desc = "the requested resource was not found"
-	} else if errors.Is(err, ustore.ErrConstraint) {
-		// A foreign key is required and was not provided or the one
-		// provided does not exist
-		code = http.StatusBadRequest
-		e.Desc = "key missing or unexisting"
-	} else if errors.Is(err, ustore.ErrDuplicatedKey) {
-		code = http.StatusBadRequest
-		e.Desc = "duplicated entry"
-	} else if errors.Is(err, ustore.ErrInternal) {
-		code = http.StatusInternalServerError
-		e.Desc = "internal server error"
-	} else {
-		code = http.StatusInternalServerError
-		e.Desc = "unknown error"
-	}
-
-	if debugMode {
-		e.Debug = err.Error()
-	}*/
-
 	code, e := ApiErrFromStoreErr(err)
 	ApiResponseWrite(w, origin, nil, []*ApiError{e}, code)
 }
@@ -101,6 +76,8 @@ func ApiErrFromStoreErr(err error) (int, *ApiError) {
 	} else if errors.Is(err, ustore.ErrTermsNotAccepted) {
 		code = http.StatusBadRequest
 		e.Desc = "terms not accepted"
+	} else if errors.Is(err, ustore.ErrBadRequest) {
+		e = ApiErrBadRequest
 	} else {
 		code = http.StatusInternalServerError
 		e.Desc = "unknown error"

@@ -15,6 +15,7 @@ var ApiErrNotAuthenticated = &ApiError{
 func (app *App) ApiAuthenticate(
 	newEntity func() ustore.Entity,
 	apiHandler func(http.ResponseWriter, *http.Request, ustore.Entity, *ustore.User, []ustore.SIDType),
+	checkEmail bool,
 ) http.HandlerFunc {
 	const origin = "authenticate"
 
@@ -35,7 +36,7 @@ func (app *App) ApiAuthenticate(
 			return
 		}
 
-		if !usr.EmailConfirmed {
+		if checkEmail && !usr.EmailConfirmed {
 			responseNotAuthenticated(w, app.name)
 			return
 		}

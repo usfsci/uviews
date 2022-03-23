@@ -12,7 +12,7 @@ import (
 
 func TestClientAdd(t *testing.T) {
 	// Create a user for the test
-	u, err := createTestUser()
+	u, err := createTestUser("osm1608@gmail.com", "Pass123+Q")
 	if err != nil {
 		t.Error(err)
 		return
@@ -62,7 +62,7 @@ func TestClientAdd(t *testing.T) {
 
 func TestWrongCredentialsClientAdd(t *testing.T) {
 	// Create a user for the test
-	u, err := createTestUser()
+	u, err := createTestUser("osm1608@gmail.com", "Pass123+Q")
 	if err != nil {
 		t.Error(err)
 		return
@@ -108,7 +108,7 @@ func TestWrongCredentialsClientAdd(t *testing.T) {
 
 func TestClientGet(t *testing.T) {
 	// Create a user for the test
-	u, err := createTestUser()
+	u, err := createTestUser("osm1608@gmail.com", "Pass123+Q")
 	if err != nil {
 		t.Error(err)
 		return
@@ -131,7 +131,7 @@ func TestClientGet(t *testing.T) {
 	}
 
 	// Get the added client
-	app.Router.HandleFunc("/users/{0}/clients/{1}", app.ApiAuthenticate(ustore.NewClient, ApiGet)).Methods(http.MethodGet)
+	app.Router.HandleFunc("/users/{0}/clients/{1}", app.ApiAuthenticate(ustore.NewClient, ApiGet, true)).Methods(http.MethodGet)
 	cidString := r.Data.(map[string]interface{})["id"].(string)
 
 	url := fmt.Sprintf("%s/%s", path, cidString)
@@ -157,32 +157,4 @@ func TestClientGet(t *testing.T) {
 	fmt.Printf("TEST USER & CLIENT ERASED\n\n")
 
 	fmt.Printf("GOT CLIENT\n")
-}
-
-func createTestUser() (*ustore.User, error) {
-	// Create a user for the test
-	an := false
-	u := &ustore.User{
-		Username:      "osm1608@gmail.com",
-		Password:      []byte("Pass123+Q"),
-		AcceptedTerms: true,
-		AcceptedNews:  &an,
-	}
-
-	if err := u.Add(context.Background(), ""); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("TEST USER CREATED\n")
-
-	// Confirm email
-	mt := time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC)
-	u.EmailConfirmed = true
-	if err := u.UpdateEmailConfirmed(context.Background(), mt, u.ID); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("TEST USER EMAIL MARKED CONFIRMED\n")
-
-	return u, nil
 }

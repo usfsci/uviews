@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	apiVersion              = "0.00"
 	contentTypeKey          = "Content-Type"
 	contentDispositionKey   = "Content-Disposition"
 	acceptLanguageHeaderKey = "Accept-Language"

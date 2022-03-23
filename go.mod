@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
 	github.com/usfsci/uauth v0.0.0-20211126101056-1674f72f9cf2
-	github.com/usfsci/ustore v0.0.0-20220321163626-2c6bd78e4ad4
+	github.com/usfsci/ustore v0.0.0-20220323164016-18e342d35e28
 	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b // indirect
 	golang.org/x/text v0.3.7
 )

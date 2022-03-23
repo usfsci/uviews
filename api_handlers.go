@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	maxMessageDelayNs = 30 * 60 * 1e9
+	// 30 sec max life for a message
+	maxMessageDelayNs = 30 * 1e9
 )
 
 func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
@@ -31,7 +32,7 @@ func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 
 	// Check ancestors length
 	if len(ancestors) != ent.AncestorsRootLen() {
-		e := ApiErrWrongAncestors
+		e := ApiErrBadRequest
 		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
 		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
@@ -50,7 +51,7 @@ func ApiAdd(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 }
 
 func ApiUpdate(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
-	const origin = "add"
+	const origin = "update"
 
 	// Decode the JSON message
 	if err := msgDecoder(r, ent, origin); err != nil {
@@ -64,12 +65,19 @@ func ApiUpdate(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ust
 
 	// Check ancestors length
 	if len(ancestors) != (ent.AncestorsRootLen() + 1) {
-		e := ApiErrWrongAncestors
+		e := ApiErrBadRequest
 		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
 		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
 
-	// TODO: Store update
+	// Updates should have a non-zero modification time
+	if ent.GetModificationTime().IsZero() {
+		e := ApiErrBadRequest
+		e.Debug = "got zero modification time on update"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+	}
+
+	// Store update
 	if err := ent.Update(r.Context(), ancestors...); err != nil {
 		ApiResponseStoreError(w, origin, err)
 		return
@@ -82,12 +90,31 @@ func ApiUpdate(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ust
 	ApiResponseWrite(w, origin, data, nil, http.StatusOK)
 }
 
+func ApiDelete(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
+	const origin = "delete"
+
+	// Get op requires 1 more ancestor than Add or List
+	if len(ancestors) != (ent.AncestorsRootLen() + 1) {
+		e := ApiErrBadRequest
+		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+	}
+
+	// TODO: How to handle the Time of requests without timestamp (no body)
+	if err := ent.Delete(r.Context(), time.Now().In(time.UTC), ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	ApiResponseWrite(w, origin, ent, nil, http.StatusOK)
+}
+
 func ApiGet(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
 	const origin = "get"
 
 	// Get op requires 1 more ancestor than Add or List
 	if len(ancestors) != (ent.AncestorsRootLen() + 1) {
-		e := ApiErrWrongAncestors
+		e := ApiErrBadRequest
 		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
 		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
@@ -97,6 +124,8 @@ func ApiGet(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 		return
 	}
 
+	ent.Zero()
+
 	ApiResponseWrite(w, origin, ent, nil, http.StatusOK)
 }
 
@@ -105,7 +134,7 @@ func ApiList(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustor
 
 	// Check ancestors length
 	if len(ancestors) != ent.AncestorsRootLen() {
-		e := ApiErrWrongAncestors
+		e := ApiErrBadRequest
 		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
 		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
@@ -116,7 +145,69 @@ func ApiList(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustor
 		return
 	}
 
+	for _, e := range ents {
+		e.Zero()
+	}
+
 	ApiResponseWrite(w, origin, ents, nil, http.StatusOK)
+}
+
+// ApiEmailValidate - Validates posted Token vs Email received token
+// ent must be a *RawToken
+func ApiEmailValidate(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
+	const origin = "validate-email"
+
+	// Decode the JSON message into an Entity of *User
+	if err := msgDecoder(r, ent, origin); err != nil {
+		apiErr := &ApiError{
+			Desc:  "unable to decode request JSON",
+			Debug: err.Error(),
+		}
+		ApiResponseWrite(w, origin, nil, []*ApiError{apiErr}, http.StatusBadRequest)
+		return
+	}
+
+	// There must be 1 ancestor (the UserID)
+	if len(ancestors) != 1 {
+		e := ApiErrBadRequest
+		e.Debug = fmt.Sprintf("expected 1 ancestor, got %d", len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Will crash on development if the passed ent is not a *RawToken
+	rawTok := ent.(*ustore.RawToken)
+	if rawTok.Token == "" {
+		e := ApiErrBadRequest
+		e.Debug = "token cannot be empty"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Get the user
+	u1 := &ustore.User{}
+	if err := u1.Get(r.Context(), &ustore.Filter{}, ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// Validate token vs. the authenticated user token
+	if err := u1.ValidateToken(rawTok.Token); err != nil {
+		e := ApiErrBadRequest
+		e.Debug = err.Error()
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Mark as valid
+	u1.EmailConfirmed = true
+	if err := u1.UpdateEmailConfirmed(r.Context(), time.Now().In(time.UTC), ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// Response with good status and no body
+	ApiResponseWrite(w, origin, nil, nil, http.StatusOK)
 }
 
 // msgDecoder -
