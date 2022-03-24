@@ -435,6 +435,73 @@ func TestUserEmailValidate(t *testing.T) {
 	fmt.Printf("DELETED TEST USER\n")
 }
 
+func TestUserResetPassword(t *testing.T) {
+	app.Router.HandleFunc("/users/{0}/tokens", app.ApiBypassAuthentication(ustore.NewRawToken, ApiList)).Methods(http.MethodGet)
+	app.Router.HandleFunc("/users/{0}/tokens", app.ApiBypassAuthentication(ustore.NewRawToken, ApiPasswordReset)).Methods(http.MethodPut)
+
+	const uname = "osm1608@gmail.com"
+	const pass = "Pass123+Q"
+	// Create test user
+	u, err := createTestUser(uname, pass)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	url := fmt.Sprintf("/users/%s/tokens", u.ID)
+
+	// Get a Password Reset Token
+	r, err := getRequest(url, uname, pass, http.StatusOK, false)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if r.Error != nil {
+		t.Errorf("%v\n", r.Error)
+		return
+	}
+
+	newPass := "ssaP321+Y"
+	// Submit token and new Pass
+	rt := &ustore.RawToken{
+		Token:    etoken,
+		Password: newPass,
+	}
+
+	msg := map[string]interface{}{
+		"timestamp": time.Now().UnixNano(),
+		"data":      rt,
+	}
+
+	r, err = putMsg(uname, pass, &msg, url, http.StatusOK, false)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if r.Error != nil {
+		t.Errorf("%v\n", r.Error)
+		return
+	}
+
+	// Check that the Password was reset
+	u1 := &ustore.User{}
+	if err := u1.Get(context.Background(), &ustore.Filter{}, u.ID); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := u1.Authenticate(newPass); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Erase Test usr
+	if err := (&ustore.User{}).Erase(context.Background(), time.Now().In(time.UTC), u.ID); err != nil {
+		t.Error(err)
+		return
+	}
+}
+
 func TestUserAuthorization(t *testing.T) {
 	app.Router.HandleFunc("/users/{0}", app.ApiAuthenticate(ustore.NewUser, ApiGet, true)).Methods(http.MethodGet)
 	app.Router.HandleFunc("/users/{0}", app.ApiAuthenticate(ustore.NewUser, ApiUpdate, true)).Methods(http.MethodPut)
@@ -503,6 +570,7 @@ func createTestUser(uname string, password string) (*ustore.User, error) {
 		Password:      []byte(password),
 		AcceptedTerms: true,
 		AcceptedNews:  &an,
+		CountryCode:   "ES",
 	}
 
 	if err := u.Add(context.Background(), ""); err != nil {

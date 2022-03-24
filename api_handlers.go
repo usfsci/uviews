@@ -115,7 +115,7 @@ func ApiGet(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore
 	// Get op requires 1 more ancestor than Add or List
 	if len(ancestors) != (ent.AncestorsRootLen() + 1) {
 		e := ApiErrBadRequest
-		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen(), len(ancestors))
+		e.Debug = fmt.Sprintf("expected %d ancestors, got %d", ent.AncestorsRootLen()+1, len(ancestors))
 		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
 	}
 
@@ -202,6 +202,139 @@ func ApiEmailValidate(w http.ResponseWriter, r *http.Request, ent ustore.Entity,
 	// Mark as valid
 	u1.EmailConfirmed = true
 	if err := u1.UpdateEmailConfirmed(r.Context(), time.Now().In(time.UTC), ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// Response with good status and no body
+	ApiResponseWrite(w, origin, nil, nil, http.StatusOK)
+}
+
+// ApiPasswordReset - Validates posted Token vs Email received token
+// and resets password
+// ent must be a *RawToken
+func ApiPasswordReset(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
+	const origin = "password-reset"
+
+	// Decode the JSON message into an Entity of *User
+	if err := msgDecoder(r, ent, origin); err != nil {
+		apiErr := &ApiError{
+			Desc:  "unable to decode request JSON",
+			Debug: err.Error(),
+		}
+		ApiResponseWrite(w, origin, nil, []*ApiError{apiErr}, http.StatusBadRequest)
+		return
+	}
+
+	// There must be 1 ancestor (the UserID)
+	if len(ancestors) != 1 {
+		e := ApiErrBadRequest
+		e.Debug = fmt.Sprintf("expected 1 ancestor, got %d", len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Will crash on development if the passed ent is not a *RawToken
+	rawTok := ent.(*ustore.RawToken)
+	if rawTok.Token == "" {
+		e := ApiErrBadRequest
+		e.Debug = "token cannot be empty"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Get the user
+	u1 := &ustore.User{}
+	if err := u1.Get(r.Context(), &ustore.Filter{}, ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// The user email must have been previously validated
+	if !u1.EmailConfirmed {
+		e := ApiErrBadRequest
+		e.Debug = "user email has not been validated yet"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Validate token vs. the authenticated user token
+	if err := u1.ValidateToken(rawTok.Token); err != nil {
+		e := ApiErrBadRequest
+		e.Debug = err.Error()
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Update Password
+	if err := (&ustore.User{
+		Base:     ustore.Base{ModificationTime: time.Now().In(time.UTC)},
+		Password: []byte(rawTok.Password),
+	}).Update(r.Context(), ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// Response with good status and no body
+	ApiResponseWrite(w, origin, nil, nil, http.StatusOK)
+}
+
+func ApiGetToken(w http.ResponseWriter, r *http.Request, ent ustore.Entity, u *ustore.User, ancestors []ustore.SIDType) {
+	const origin = "password-reset"
+
+	// Decode the JSON message into an Entity of *User
+	if err := msgDecoder(r, ent, origin); err != nil {
+		apiErr := &ApiError{
+			Desc:  "unable to decode request JSON",
+			Debug: err.Error(),
+		}
+		ApiResponseWrite(w, origin, nil, []*ApiError{apiErr}, http.StatusBadRequest)
+		return
+	}
+
+	// There must be 1 ancestor (the UserID)
+	if len(ancestors) != 1 {
+		e := ApiErrBadRequest
+		e.Debug = fmt.Sprintf("expected 1 ancestor, got %d", len(ancestors))
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Will crash on development if the passed ent is not a *RawToken
+	rawTok := ent.(*ustore.RawToken)
+	if rawTok.Token == "" {
+		e := ApiErrBadRequest
+		e.Debug = "token cannot be empty"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Get the user
+	u1 := &ustore.User{}
+	if err := u1.Get(r.Context(), &ustore.Filter{}, ancestors...); err != nil {
+		ApiResponseStoreError(w, origin, err)
+		return
+	}
+
+	// The user email must have been previously validated
+	if !u1.EmailConfirmed {
+		e := ApiErrBadRequest
+		e.Debug = "user email has not been validated yet"
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Validate token vs. the authenticated user token
+	if err := u1.ValidateToken(rawTok.Token); err != nil {
+		e := ApiErrBadRequest
+		e.Debug = err.Error()
+		ApiResponseWrite(w, origin, nil, []*ApiError{e}, http.StatusBadRequest)
+		return
+	}
+
+	// Update Password
+	u1.Password = []byte(rawTok.Password)
+	if err := u1.Update(r.Context(), ancestors...); err != nil {
 		ApiResponseStoreError(w, origin, err)
 		return
 	}

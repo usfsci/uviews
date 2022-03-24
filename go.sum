@@ -76,6 +76,10 @@ github.com/usfsci/ustore v0.0.0-20220322181934-46414cc44188 h1:NrokIbRvT++buUQqY
 github.com/usfsci/ustore v0.0.0-20220322181934-46414cc44188/go.mod h1:QP1Qi9qsPznVXXvfIUfN8c1fLybMWpJWQpO11xpZMb4=
 github.com/usfsci/ustore v0.0.0-20220323164016-18e342d35e28 h1:vPcDwvx1qdFs0oHE+4vJqnVNj1oA6m9WfeiDN2DLSdQ=
 github.com/usfsci/ustore v0.0.0-20220323164016-18e342d35e28/go.mod h1:QP1Qi9qsPznVXXvfIUfN8c1fLybMWpJWQpO11xpZMb4=
+github.com/usfsci/ustore v0.0.0-20220324091436-211c33cdb459 h1:V2eSbhtghcPyQjukAUP9gfS1mnmXz7YyGAGVyeBskqU=
+github.com/usfsci/ustore v0.0.0-20220324091436-211c33cdb459/go.mod h1:QP1Qi9qsPznVXXvfIUfN8c1fLybMWpJWQpO11xpZMb4=
+github.com/usfsci/ustore v0.0.0-20220324094919-426a8cf4c9a2 h1:Dv+Ocpul5baCzucSkIYn9u3/aLNVmwizi9Q6NG5qu5g=
+github.com/usfsci/ustore v0.0.0-20220324094919-426a8cf4c9a2/go.mod h1:QP1Qi9qsPznVXXvfIUfN8c1fLybMWpJWQpO11xpZMb4=
 github.com/usfsci/uutils v0.0.0-20210722102616-3b352f820f24 h1:/XO+pRxgwZl2GMWmZ7I0JlLkcCxxIa0oDVPylkxhYdM=
 github.com/usfsci/uutils v0.0.0-20210722102616-3b352f820f24/go.mod h1:DNX0f6XV2m3uHfXTRBUDjoVc6WAUQSp4znOlvMlSoyg=
 github.com/usfsci/uutils v0.0.0-20220311122802-de1ef89cb0bf h1:QlXPusnJeHvSdQJUn+yYxU5p2bIURoQePpus/rLe8XA=
